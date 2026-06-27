@@ -1,0 +1,10 @@
+﻿**/agence/
+**/.venv/
+**/venv/
+**/ENV/
+**/mlruns/
+**/.git/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd

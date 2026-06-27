@@ -1,0 +1,20 @@
+# Éviter de copier les historiques d'entraînement MLflow (Ultra lourd)
+mlruns/
+mlartifacts/
+
+# Éviter de copier les données brutes ou locales
+data/
+
+# Éviter les dossiers de développement et notebooks
+notebooks/
+.pytest_cache/
+
+# Éviter les caches Python et environnements virtuels locaux
+**/__pycache__/
+*.pyc
+venv/
+.venv/
+env/
+
+# Éviter les sauvegardes
+*.bak

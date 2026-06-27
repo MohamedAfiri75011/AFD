@@ -1,0 +1,63 @@
+name: Release Pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  validate-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest httpx fastapi pydantic sqlalchemy pandas numpy mlflow
+
+      - name: Run Linter
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run Unit Tests
+        run: |
+          pytest tests/
+
+      - name: Set up Docker Buildx
+        uses: actions/setup-buildx-action@v3
+
+      # Connexion sécurisée à DockerHub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Build et Publication de l'API
+      - name: Build and Push API Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.api
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/agence-api:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/agence-api:${{ github.sha }}
+
+      # Build et Publication du Scheduler
+      - name: Build and Push Scheduler Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.scheduler
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/agence-scheduler:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/agence-scheduler:${{ github.sha }}

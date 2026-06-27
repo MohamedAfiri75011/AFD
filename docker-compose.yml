@@ -1,0 +1,83 @@
+﻿services:
+  # ============================================================================
+  # 1. SERVER MLFLOW (Gestion du cycle de vie des modèles)
+  # ============================================================================
+  mlflow_server:
+    image: ghcr.io/mlflow/mlflow:v2.11.3
+    container_name: mlflow_server
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns
+    command: mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlruns --host 0.0.0.0 --port 5000
+
+  # ============================================================================
+  # 2. BACKEND API - FASTAPI (Moteur d'exécution et endpoints ETL/Train/Predict)
+  # ============================================================================
+  agence_api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: agence_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      # On déclare le dossier racine ET le dossier api pour sécuriser les imports locaux
+      - PYTHONPATH=/app:/app/api
+      # 🎯 CAPTURE DU COMMIT GIT (Résout définitivement le problème "indisponible")
+      - GIT_COMMIT=${GIT_COMMIT:-indisponible}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    working_dir: /app
+    # Commande robuste qui conserve main.py dans le dossier api/ et surveille les changements
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/api
+    depends_on:
+      - mlflow_server
+
+  # ============================================================================
+  # 3. INTERFACE UTILISATEUR - STREAMLIT (Visualisation et formulaires dynamiques)
+  # ============================================================================
+  streamlit_app:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: streamlit_app
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    working_dir: /app
+    command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0
+    depends_on:
+      - agence_api
+
+  # ============================================================================
+  # 4. ORCHESTRATEUR / SCHEDULER (Déclenchement automatique de l'ETL et du Train)
+  # ============================================================================
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.scheduler
+    container_name: scheduler
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+      - GIT_COMMIT=${GIT_COMMIT:-indisponible}
+      - PYTHONUNBUFFERED=1  # Force l'affichage des logs en temps réel !
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    working_dir: /app
+    # Cible correctement le script localisé dans son sous-dossier dédié
+    command: python scheduler/scheduler.py
+    depends_on:
+      - agence_api
