@@ -31,7 +31,7 @@ jobs:
           pytest tests/
 
       - name: Set up Docker Buildx
-        uses: actions/setup-buildx-action@v3
+        uses: uses: docker/setup-buildx-action@v3
 
       # Connexion sécurisée à DockerHub
       - name: Log in to Docker Hub
