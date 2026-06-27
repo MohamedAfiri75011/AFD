@@ -111,7 +111,6 @@ def get_model_metadata():
 # ==============================================================================
 def async_training_worker(n_estimators: int, random_state: int):
     """Worker exécuté en arrière-plan pour éviter de bloquer le serveur API."""
-    global TRAINING_STATUS
     try:
         res = train_model(n_estimators=n_estimators, random_state=random_state)
         if res.get("status") == "success":
@@ -127,7 +126,6 @@ def async_training_worker(n_estimators: int, random_state: int):
 @app.post("/train")
 def trigger_training(payload: TrainInput, background_tasks: BackgroundTasks, username: str = Depends(verification_auth)):
     """Déclenche le ré-entraînement en arrière-plan (anti-timeout). Protégé par Basic Auth."""
-    global TRAINING_STATUS
     
     if TRAINING_STATUS["status"] == "running":
         return {"status": "warning", "message": "Un entraînement est déjà en cours d'exécution."}
