@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 pytest httpx fastapi pydantic sqlalchemy pandas numpy mlflow psycopg2-binary
+          pip install flake8 pytest httpx fastapi pydantic sqlalchemy pandas numpy mlflow psycopg2-binary scikit-learn
 
       - name: Run Linter
         run: |
@@ -32,6 +32,7 @@ jobs:
         run: |
           pytest tests/
 
+      # CORRECTIF : Utilisation du catalogue officiel docker/ et non actions/
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -42,9 +43,9 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Build et Publication de l'API
+      # Build et Publication de l'API (v6)
       - name: Build and Push API Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.api
@@ -53,9 +54,9 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/agence-api:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/agence-api:${{ github.sha }}
 
-      # Build et Publication du Scheduler
+      # Build et Publication du Scheduler (v6)
       - name: Build and Push Scheduler Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.scheduler
