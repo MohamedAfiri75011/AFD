@@ -34,6 +34,8 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Run Unit Tests
+        env:
+          SUPABASE_DB_URI: postgresql://dummy_user:dummy_password@localhost:5432/dummy_db
         run: |
           # Ajout du chemin racine pour éviter les ModuleNotFoundError
           export PYTHONPATH=$PYTHONPATH:.
