@@ -37,12 +37,19 @@ app = FastAPI(
 # ==============================================================================
 # CONFIGURATION DE LA SECURITE (BASIC AUTH DEPUIS LE .ENV)
 # ==============================================================================
-security = HTTPBasic()
+ecurity = HTTPBasic()
 ADMIN_USER = os.getenv("ADMIN_USER", "admin_agence")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "AFD2026!")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")  # Plus de mot de passe par défaut ici !
 
 def verification_auth(credentials: HTTPBasicCredentials = Depends(security)):
     """Verifie de maniere securisee les identifiants de Basic Auth."""
+    # Si la variable n'est pas définie dans l'environnement, on refuse par sécurité
+    if not ADMIN_PASSWORD:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Configuration de sécurité manquante sur le serveur.",
+        )
+        
     correct_username = secrets.compare_digest(credentials.username, ADMIN_USER)
     correct_password = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
     
@@ -54,11 +61,16 @@ def verification_auth(credentials: HTTPBasicCredentials = Depends(security)):
         )
     return credentials.username
 
-# Connection Supabase
-SUPABASE_DB_URI = os.getenv(
-    "SUPABASE_DB_URI",
-    "postgresql://postgres.vsusfuhifwtuxohnbmwi:Uv7K6MelZ4xMVcDS@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require"
-)
+# Connexion Supabase sécurisée
+SUPABASE_DB_URI = os.getenv("SUPABASE_DB_URI")
+
+if not SUPABASE_DB_URI:
+    # En local, l'API lèvera cette erreur si le fichier .env est mal lu
+    # En CI (GitHub Actions), notre variable dummy prendra le relais sans encombre
+    raise ValueError(
+        "Erreur : La variable d'environnement SUPABASE_DB_URI n'est pas définie !"
+    )
+
 engine = create_engine(SUPABASE_DB_URI, pool_size=2, max_overflow=0, pool_recycle=300)
 
 # MLflow Tracking
