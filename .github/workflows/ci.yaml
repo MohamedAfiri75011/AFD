@@ -36,6 +36,7 @@ jobs:
       - name: Run Unit Tests
         env:
           SUPABASE_DB_URI: postgresql://dummy_user:dummy_password@localhost:5432/dummy_db
+          ADMIN_PASSWORD: dummy_password_for_tests
         run: |
           # Ajout du chemin racine pour éviter les ModuleNotFoundError
           export PYTHONPATH=$PYTHONPATH:.
