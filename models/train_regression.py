@@ -1,62 +1,84 @@
-# -*- coding: utf-8 -*-
 import os
 import sys
 import subprocess
+import json
+import hashlib
+import time
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
+
+from dotenv import load_dotenv
+load_dotenv()
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.pool import NullPool
 import mlflow
 import mlflow.sklearn
-import mlflow.data
-from mlflow.data.pandas_dataset import PandasDataset
-from mlflow.tracking import MlflowClient  # Pour gérer automatiquement les alias
+from mlflow.tracking import MlflowClient
+
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import root_mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-# --- GESTION DYNAMIQUE DU PYTHON PATH ---
+
+
+# ============================================================
+# 1. PYTHON PATH DYNAMIQUE
+# ============================================================
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, ".."))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
+# ============================================================
+# 2. ENGINE SUPABASE WITH NULLPOOL (Anti-saturation des connexions)
+# ============================================================
 try:
     from api.database import engine
-    print("[TRAIN] Engine importé avec succès depuis api.database.")
+    print("[TRAIN] Engine importé depuis api.database.")
 except ImportError:
-    # Utilisation de l'URI IPv4 validée de ton pooler Supabase
-    SUPABASE_DB_URI = "postgresql://postgres.vsusfuhifwtuxohnbmwi:Uv7K6MelZ4xMVcDS@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require"
-    engine = create_engine(SUPABASE_DB_URI, pool_pre_ping=True)
-    print("[TRAIN] Bascule sur l'engine local de secours avec configuration IPv4.")
-    
-# Configuration
-TABLE_NAME = "afd"
-MODEL_NAME = "RandomForestRegressor"
+    SUPABASE_DB_URI = os.getenv(
+        "SUPABASE_DB_URI",
+        "postgresql://postgres:postgres@localhost:5432/postgres"
+    )
+    engine = create_engine(SUPABASE_DB_URI, poolclass=NullPool)
+    print("[TRAIN] Fallback sur SUPABASE_DB_URI avec NullPool (Sécurité Connexions).")
+
+# ============================================================
+# 3. CONFIG
+# ============================================================
+TABLE_NAME = os.getenv("TABLE_NAME", "afd")
+MODEL_NAME = os.getenv("MODEL_NAME", "RandomForestRegressor")
+LOG_FULL_DATASET = True
 
 def get_git_revision_hash() -> str:
-    """Récupère le hash Git injecté par Docker ou via la commande locale."""
-    # 1. On force la lecture de la variable d'environnement injectée dans le conteneur
     git_env = os.getenv("GIT_COMMIT", "").strip()
     if git_env and git_env != "indisponible":
         return git_env
-        
-    # 2. Sécurité : Si exécuté en local hors Docker
     try:
-        import subprocess
-        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"]
+        ).decode("ascii").strip()
     except Exception:
         return "indisponible"
-    
-def train_model(n_estimators=100, random_state=42, demo_mode=True, **kwargs):
+
+# ============================================================
+# 4. FONCTION PRINCIPALE D'ENTRAÎNEMENT
+# ============================================================
+def train_model(
+    n_estimators=800,
+    max_depth=None,
+    min_samples_leaf=1,
+    random_state=42,
+    demo_mode=False
+):
     print("Récupération des données depuis Supabase...")
-    
     current_code_version = get_git_revision_hash()
-    
-    # 1. Extraction des données
+
     try:
         query = f'SELECT * FROM public."{TABLE_NAME}";'
         df = pd.read_sql_query(query, con=engine)
@@ -66,201 +88,267 @@ def train_model(n_estimators=100, random_state=42, demo_mode=True, **kwargs):
     if df.empty:
         return {"status": "failed", "error": f"La table '{TABLE_NAME}' est vide."}
 
-    # 🎯 OPTIMISATION SPECIAL SOUTENANCE : Mode Démo / Échantillonnage
     total_rows_database = len(df)
+
     if demo_mode and total_rows_database > 1000:
-        print(f"[DEMO MODE] Activation du mode démo. Échantillonnage de {total_rows_database} lignes à 1 000 lignes.")
-        df = df.sample(n=1000, random_state=int(random_state)).reset_index(drop=True)
-
-    # 2. Nettoyage standardisé des noms de colonnes
-    df.columns = [
-        col.lower()
-           .strip()
-           .replace("é", "e")
-           .replace("è", "e")
-           .replace("à", "a")
-           .replace("ô", "o")
-           .replace("'", "_")
-           .replace("-", "_")
-           .replace(" ", "_")
-           .replace("(", "")
-           .replace(")", "")
-           .replace("/", "_")
-           .replace(".", "_")
-        for col in df.columns
-    ]
-
-    # 3. Vérification et isolement de la cible (y)
-    if "log_engagements" in df.columns:
-        y_log = df["log_engagements"]
+        print(f"[DEMO MODE] Échantillonnage à 1000 lignes.")
+        df = df.sample(n=1000, random_state=random_state).reset_index(drop=True)
     else:
-        return {"status": "failed", "error": "La colonne 'log_engagements' est introuvable."}
+        print(f"[PRODUCTION MODE] Entraînement sur {total_rows_database} lignes.")
 
-    # 4. Isolement strict des 5 caractéristiques (X) demandées
-    features_api = [
-        "agence", 
-        "secteur", 
-        "bi_multi_1", 
-        "type_de_financement", 
-        "pays_beneficiaire"
-    ]
-
-    for col in features_api:
-        if col not in df.columns:
-            return {"status": "failed", "error": f"La colonne requise '{col}' est introuvable après traitement."}
-
-    X = df[features_api]
-
-    X_train, X_val, y_train_log, y_val_log = train_test_split(
-        X, y_log, test_size=0.2, random_state=int(random_state)
+    # Normalisation des noms de colonnes
+    df.columns = (
+        df.columns
+        .str.lower()
+        .str.strip()
+        .str.normalize("NFKD")
+        .str.encode("ascii", errors="ignore")
+        .str.decode("utf-8")
+        .str.replace(r"[^\w]+", "_", regex=True)
     )
 
-    # 5. Définition EXPLICITE des types de colonnes
-    categorical_cols = [
-        "agence", 
-        "secteur", 
-        "bi_multi_1", 
-        "type_de_financement", 
-        "pays_beneficiaire"
+    if "log_engagements" not in df.columns:
+        return {"status": "failed", "error": "Colonne 'log_engagements' introuvable."}
+
+    y_log = df["log_engagements"]
+    
+    # Exclusion de la variable cible et du montant brut pour éviter le Data Leakage
+    cols_to_exclude = [
+        "log_engagements", 
+        "engagements_k_eur_", 
+        "engagements_k_eur", 
+        "id", 
+        "created_at", 
+        "index"
     ]
-    numerical_cols = []
+    
+    feature_cols = [c for c in df.columns if c not in cols_to_exclude]
+    X = df[feature_cols]
 
-    # 6. Construction du Pipeline de Preprocessing
-    numerical_transformer = SimpleImputer(strategy="median")
-    categorical_transformer = Pipeline(steps=[
-        ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=True))
-    ])
+    X_train, X_val, y_train_log, y_val_log = train_test_split(
+        X, y_log, test_size=0.2, random_state=random_state
+    )
 
-    preprocessor = ColumnTransformer(transformers=[
-        ("num", numerical_transformer, numerical_cols),
-        ("cat", categorical_transformer, categorical_cols)
-    ])
+    categorical_cols = X.select_dtypes(include=["object", "category"]).columns.tolist()
+    numerical_cols = X.select_dtypes(include=["int64", "float64"]).columns.tolist()
 
-    # 7. Pipeline Global avec RandomForest OPTIMISÉ
-    model_pipeline = Pipeline(steps=[
-        ("preprocessor", preprocessor),
-        ("regressor", RandomForestRegressor(
-            n_estimators=int(n_estimators), 
-            random_state=int(random_state), 
-            max_depth=12,             
-            min_samples_leaf=5,        
-            max_features="sqrt",       
-            n_jobs=-1                  
-        ))
-    ])
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", SimpleImputer(strategy="median"), numerical_cols),
+            (
+                "cat",
+                Pipeline(
+                    steps=[
+                        ("imputer", SimpleImputer(strategy="most_frequent")),
+                        ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+                    ]
+                ),
+                categorical_cols,
+            ),
+        ]
+    )
 
-    # 8. Entraînement et Tracking MLflow
+    model_pipeline = Pipeline(
+        steps=[
+            ("preprocessor", preprocessor),
+            (
+                "regressor",
+                RandomForestRegressor(
+                    n_estimators=n_estimators,
+                    max_depth=max_depth,
+                    min_samples_leaf=min_samples_leaf,
+                    random_state=random_state,
+                    max_features="sqrt",
+                    n_jobs=-1,
+                ),
+            ),
+        ]
+    )
+
+    # ============================================================
+    # 5. MLflow Tracking
+    # ============================================================
     try:
-        mlflow.set_experiment("Agence_Developpement_Regression")
+        mlflow_uri = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow:5000")
+        mlflow.set_tracking_uri(mlflow_uri)
         
+        mlflow.set_experiment("Agence_Developpement_Regression")
+
         with mlflow.start_run() as run:
-            print("Entraînement du modèle...")
             mlflow.set_tag("git_commit", current_code_version)
-            
-            # Versionnement du Dataset
-            mlflow_dataset: PandasDataset = mlflow.data.from_pandas(
-                df=pd.concat([X_train, y_train_log], axis=1), 
-                targets="log_engagements", 
-                name="afd_train_dataset"
-            )
-            mlflow.log_input(mlflow_dataset, context="training")
-            
-            # Ajustement du modèle
+            mlflow.set_tag("mode", "demo" if demo_mode else "full")
+
+            # Enregistrement des paramètres sous forme de colonnes MLflow
+            mlflow.log_param("n_estimators", int(n_estimators))
+            mlflow.log_param("random_state", int(random_state))
+            mlflow.log_param("min_samples_leaf", int(min_samples_leaf))
+
+            def hash_dataframe(df_local: pd.DataFrame) -> str:
+                return hashlib.md5(pd.util.hash_pandas_object(df_local, index=True).values).hexdigest()
+
+            dataset_version = hash_dataframe(df)
+            mlflow.log_param("dataset_version", dataset_version)
+            mlflow.log_param("dataset_rows", int(df.shape[0]))
+            mlflow.log_param("dataset_cols", int(df.shape[1]))
+            mlflow.set_tag("dataset_name", f"{TABLE_NAME}_train")
+
+            os.makedirs("dataset_artifact", exist_ok=True)
+            meta = {
+                "name": f"{TABLE_NAME}_train",
+                "version": dataset_version,
+                "rows": int(df.shape[0]),
+                "cols": int(df.shape[1]),
+                "schema": list(df.columns)
+            }
+            meta_path = os.path.join("dataset_artifact", "dataset_metadata.json")
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump(meta, f, ensure_ascii=False, indent=2)
+
+            mlflow.log_artifact(meta_path, artifact_path="dataset")
+
+            if LOG_FULL_DATASET:
+                try:
+                    df_sample_ui = df.head(100) 
+                    mlflow_dataset = mlflow.data.from_pandas(
+                        df=df_sample_ui,
+                        targets="log_engagements",
+                        name=f"{TABLE_NAME}_prod_snapshot"
+                    )
+                    mlflow.log_input(mlflow_dataset, context="training", tags={
+                        "real_rows_count": str(df.shape[0]),
+                        "dataset_hash": dataset_version
+                    })
+                except Exception as e:
+                    print(f"[MLFLOW] Échec du log UI du dataset : {e}")
+
+            # Entraînement du modèle
             model_pipeline.fit(X_train, y_train_log)
-            
-            # Prédictions
+
+            # Prédictions d'évaluation
             y_train_pred_log = model_pipeline.predict(X_train)
             y_val_pred_log = model_pipeline.predict(X_val)
+
+            # --- CALCUL DES MÉTRIQUES ---
+            r2_log_train = r2_score(y_train_log, y_train_pred_log)
+            r2_log_val = r2_score(y_val_log, y_val_pred_log)
             
-            # Calcul du R2
-            train_r2 = model_pipeline.score(X_train, y_train_log)
-            val_r2 = model_pipeline.score(X_val, y_val_log)
-            
-            # Conversion k€
-            y_train_real = np.expm1(y_train_log)
-            y_train_pred_real = np.expm1(y_train_pred_log)
+            # Reconversion sur l'échelle réelle (Euros)
             y_val_real = np.expm1(y_val_log)
             y_val_pred_real = np.expm1(y_val_pred_log)
-            
-            # Erreurs réelles
-            train_rmse_k_eur = root_mean_squared_error(y_train_real, y_train_pred_real)
-            train_mae_k_eur = mean_absolute_error(y_train_real, y_train_pred_real)
-            val_rmse_k_eur = root_mean_squared_error(y_val_real, y_val_pred_real)
-            val_mae_k_eur = mean_absolute_error(y_val_real, y_val_pred_real)
-            
-            # Logging MLflow
-            mlflow.log_param("code_version", current_code_version)
-            mlflow.log_param("model_type", MODEL_NAME)
-            mlflow.log_param("n_estimators", n_estimators)
-            mlflow.log_param("demo_mode", demo_mode)
-            mlflow.log_param("rows_trained", len(df))
-            
-            mlflow.log_metric("train_r2", train_r2)
-            mlflow.log_metric("val_r2", val_r2)
-            mlflow.log_metric("train_rmse_k_eur", train_rmse_k_eur)
-            mlflow.log_metric("val_rmse_k_eur", val_rmse_k_eur)
-            mlflow.log_metric("train_mae_k_eur", train_mae_k_eur)
-            mlflow.log_metric("mae", val_mae_k_eur)
-            
-            # Sauvegarde dans le Model Registry
-            model_info = mlflow.sklearn.log_model(
-                sk_model=model_pipeline, 
-                artifact_path="model",
-                registered_model_name=MODEL_NAME
-            )
-            
-            # --- ALIAS CHAMPION INTELLIGENT ---
-            print("[MLFLOW] Évaluation de la version pour le statut 'champion'...")
-            client = MlflowClient()
-            model_version = model_info.registered_model_version
-            
+
+            val_mae_k_eur = mean_absolute_error(y_val_real, y_val_pred_real) / 1000.0
+            val_rmse_k_eur = mean_squared_error(y_val_real, y_val_pred_real, squared=False) / 1000.0
+
+            # AJOUT POUR LA DÉMO : Calcul du Biais Central
+            biais_reel = np.mean(y_val_real - y_val_pred_real)
+            biais_k_eur = biais_reel / 1000.0
+
+            # --- LOGGING DES COMPARAISONS SUR MLFLOW ---
+            mlflow.log_metric("R2_log_train", float(r2_log_train))
+            mlflow.log_metric("R2_log_val", float(r2_log_val))
+            mlflow.log_metric("val_mae_k_eur", float(val_mae_k_eur))
+            mlflow.log_metric("val_rmse_k_eur", float(val_rmse_k_eur))
+            mlflow.log_metric("val_bias_k_eur", float(biais_k_eur)) # Logging du biais
+
+            print(f"[METRICS] R2 Train (Log): {r2_log_train:.4f} | R2 Validation (Log): {r2_log_val:.4f}")
+            print(f"[METRICS] Biais: {biais_k_eur:.2f} k€ | MAE: {val_mae_k_eur:.2f} k€ | RMSE: {val_rmse_k_eur:.2f} k€")
+            sys.stdout.flush()
+
+            # Enregistrement de l'artefact du modèle
             try:
-                # 1. Tentative de récupération des performances du champion en cours
-                current_champion = client.get_model_version_by_alias(name=MODEL_NAME, alias="champion")
-                current_champion_run = client.get_run(current_champion.run_id)
-                current_champion_mae = float(current_champion_run.data.metrics.get("mae", float("inf")))
-                
-                print(f"[MLFLOW] Champion actuel : Version {current_champion.version} (MAE: {current_champion_mae:.2f} k€)")
-                print(f"[MLFLOW] Nouveau modèle   : Version {model_version} (MAE: {val_mae_k_eur:.2f} k€)")
-                
-                # 2. Transition de l'alias uniquement en cas d'amélioration de la MAE
-                if val_mae_k_eur < current_champion_mae:
-                    client.set_registered_model_alias(
-                        name=MODEL_NAME,
-                        alias="champion",
-                        version=str(model_version)
-                    )
-                    print(f"[MLFLOW] Succès : La version {model_version} montre une MAE plus faible. Nouveau 'champion' assigné.")
-                else:
-                    print(f"[MLFLOW] Stabilité : La version {model_version} n'améliore pas la MAE. Le champion reste la version {current_champion.version}.")
-            
-            except Exception:
-                # Bloc de secours s'il n'existe aucun champion (initialisation du registre)
-                print(f"[MLFLOW] Aucun alias 'champion' détecté. Initialisation par défaut avec la version {model_version}.")
-                client.set_registered_model_alias(
-                    name=MODEL_NAME,
-                    alias="champion",
-                    version=str(model_version)
+                model_info = mlflow.sklearn.log_model(
+                    sk_model=model_pipeline,
+                    artifact_path="model",
+                    serialization_format="cloudpickle"
                 )
-            
-            print(f"Entraînement terminé avec succès ! Val R2: {val_r2:.3f} | Val MAE: {val_mae_k_eur:.0f} k€")
+            except TypeError:
+                model_info = mlflow.sklearn.log_model(
+                    sk_model=model_pipeline,
+                    artifact_path="model"
+                )
+
+            # Gestion de l'alias Champion basé sur la métrique MAE
+            client = MlflowClient()
+            model_version = None
+            try:
+                model_uri = getattr(model_info, "model_uri", None)
+                if not model_uri:
+                    model_uri = f"runs:/{run.info.run_id}/model"
+                
+                try:
+                    client.get_registered_model(MODEL_NAME)
+                except Exception:
+                    print(f"[MLFLOW] Le modèle enregistré '{MODEL_NAME}' n'existe pas. Création...")
+                    client.create_registered_model(MODEL_NAME)
+
+                mv = client.create_model_version(name=MODEL_NAME, source=model_uri, run_id=run.info.run_id)
+                model_version = mv.version
+            except Exception as e:
+                print(f"[MLFLOW WARNING] Échec de la création de la version : {e}")
+                try:
+                    all_versions = client.search_model_versions(f"name='{MODEL_NAME}'")
+                    for v in all_versions:
+                        if getattr(v, "run_id", None) == run.info.run_id:
+                            model_version = v.version
+                            break
+                except Exception:
+                    pass
+
+            try:
+                if model_version is not None:
+                    try:
+                        current_champion = client.get_model_version_by_alias(name=MODEL_NAME, alias="champion")
+                        current_champion_run = client.get_run(current_champion.run_id)
+                        current_champion_mae = float(current_champion_run.data.metrics.get("val_mae_k_eur", float("inf")))
+
+                        if val_mae_k_eur < current_champion_mae:
+                            client.set_registered_model_alias(name=MODEL_NAME, alias="champion", version=str(model_version))
+                            print(f"[MLFLOW] Nouveau champion validé : version {model_version}")
+                        else:
+                            print(f"[MLFLOW] Champion actuel conservé : version {current_champion.version}")
+                    except Exception:
+                        client.set_registered_model_alias(name=MODEL_NAME, alias="champion", version=str(model_version))
+                        print(f"[MLFLOW] Premier modèle enregistré comme champion : version {model_version}")
+            except Exception as e:
+                print("[MLFLOW WARNING] Erreur lors de l'alias champion :", e)
+
+            # HISTORISATION SÉCURISÉE DES MÉTRIQUES DANS SUPABASE POUR GRAFANA
+            try:
+                with engine.begin() as conn:
+                    conn.execute(
+                        text("""
+                        INSERT INTO public.model_metrics 
+                        (created_at, model_version, run_id, r2_score, mae_k_eur, rmse_k_eur, bias_k_eur)
+                        VALUES (NOW(), :version, :run, :r2, :mae, :rmse, :bias)
+                        """),
+                        {
+                            "version": str(model_version),
+                            "run": str(run.info.run_id),
+                            "r2": float(r2_log_val),
+                            "mae": float(val_mae_k_eur),
+                            "rmse": float(val_rmse_k_eur),
+                            "bias": float(biais_k_eur) # 🚨 Insertion du biais !
+                        }
+                    )
+                print("[SQL] Métriques enregistrées dans Supabase (table model_metrics) avec succès.")
+            except Exception as sql_err:
+                print(f"[SQL ERROR] Échec de l'insertion dans model_metrics : {sql_err}")
+
             return {
                 "status": "success",
                 "run_id": run.info.run_id,
                 "model_version": model_version,
                 "metrics": {
-                    "r2": val_r2, 
-                    "rmse": val_rmse_k_eur,
-                    "mae": val_mae_k_eur
-                }
+                    "r2_train": float(r2_log_train),
+                    "r2_val": float(r2_log_val),
+                    "mae_k_eur": float(val_mae_k_eur),
+                    "rmse_k_eur": float(val_rmse_k_eur),
+                    "bias_k_eur": float(biais_k_eur) # Retour du biais dans la réponse
+                },
             }
-            
-    except Exception as e:
-        return {"status": "failed", "error": f"Erreur pendant l'entraînement ou MLflow : {str(e)}"}
 
-# Bloc d'exécution principale (permet de tester le script de manière autonome)
+    except Exception as e:
+        return {"status": "failed", "error": str(e)}
+
 if __name__ == "__main__":
-    # Laissé sur True pour tes tests locaux et la soutenance en direct
-    result = train_model(n_estimators=20, random_state=42, demo_mode=True)
-    print(result)
+    train_model()

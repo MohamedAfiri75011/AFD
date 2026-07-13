@@ -1,6 +1,25 @@
+# Fichiers de données et artefacts de modèles
+*.csv
+*.pkl
+dataset_artifact/
+
+# Suivi MLflow
 mlruns/
 mlartifacts/
-**/__pycache__/
+
+# Environnements virtuels et cache Python
 .venv/
 venv/
-*.csv
+**/__pycache__/
+*.pyc
+
+# Infrastructure et volumes Docker locaux
+grafana_storage/
+
+# Sécurité (Identifiants et secrets locaux)
+.env
+api_password.txt
+
+# Fichiers système (Mac/Windows)
+.DS_Store
+Thumbs.db

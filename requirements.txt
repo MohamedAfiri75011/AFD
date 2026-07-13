@@ -9,3 +9,6 @@ schedule==1.2.2
 sqlalchemy
 psycopg2-binary
 streamlit
+prometheus-fastapi-instrumentator
+evidently==0.3.3
+

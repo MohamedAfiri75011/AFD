@@ -1,0 +1,29 @@
+# Cache et fichiers compiles Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environnements virtuels
+venv/
+.venv/
+ENV/
+env/
+
+# Fichiers de gestion de version Git
+.git/
+.gitignore
+
+# Variables d'environnement locales et secrets (securite)
+.env
+*.env
+secret*
+
+# Fichiers de tracking MLflow (totalement inutiles pour le scheduler)
+mlruns/
+mlruns.db
+
+# Fichiers système
+.DS_Store
+Thumbs.db
