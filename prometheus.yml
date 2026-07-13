@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # 1. Prometheus se surveille lui-même
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. Surveillance de ton infrastructure hôte (Node Exporter)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # 3. Surveillance de l'API FastAPI SECURISEE
+  - job_name: 'fastapi'
+    metrics_path: '/metrics'
+    basic_auth:
+      username: 'admin_agence'
+      password_file: '/etc/prometheus/secrets/api_password.txt'
+    static_configs:
+      - targets: ['fastapi_server:8000']

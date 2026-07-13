@@ -1,50 +1,70 @@
-# -*- coding: utf-8 -*-
-import mlflow.sklearn
+import os
+import sys
+import json
 import pandas as pd
 import numpy as np
+import mlflow
+import mlflow.pyfunc
+import logging
 
-# Configuration MLflow locale
-MLFLOW_TRACKING_URI = "http://mlflow_server:5000"
-mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-MODEL_URI = "models:/RandomForestRegressor@champion"
+MLFLOW_TRACKING_SERVER = os.getenv("MLFLOW_TRACKING_SERVER", "http://mlflow_server:5000")
+mlflow.set_tracking_uri(MLFLOW_TRACKING_SERVER)
+mlflow.set_registry_uri(MLFLOW_TRACKING_SERVER)
 
-def make_prediction(input_data: dict) -> float:
-    """ Charge le modèle Champion actuel et réalise l'inférence sur 5 variables. """
+MODEL_NAME = "RandomForestRegressor"
+
+# AJOUT DU CACHE GLOBAL
+_cached_model = None
+
+def load_model_from_mlflow(version="champion", force_reload=False):
+    """Charge le modèle depuis MLflow (avec système de cache)"""
+    global _cached_model
+    
+    # Si le modèle est déjà en RAM et qu'on ne force pas le rechargement, on le réutilise direct.
+    if _cached_model is not None and not force_reload:
+        return _cached_model
+
+    logger.info(f"Téléchargement du modèle '{MODEL_NAME}' (alias: {version}) depuis MLflow...")
+    model_uri = f"models:/{MODEL_NAME}@{version}"
     try:
-        # 1. Chargement dynamique du modèle depuis le registre MLflow
-        model = mlflow.sklearn.load_model(MODEL_URI)
-        
-        # 2. Transformation du dictionnaire reçu en DataFrame d'une seule ligne
-        # On s'assure que les clés soient strictement au bon format (minuscules et sans caractères complexes)
-        clean_data = {}
-        for key, value in input_data.items():
-            clean_key = (
-                key.lower()
-                   .strip()
-                   .replace("é", "e")
-                   .replace("è", "e")
-                   .replace("à", "a")
-                   .replace("/", "_")
-                   .replace(".", "_")
-                   .replace(" ", "_")
-            )
-            clean_data[clean_key] = [value]
-            
-        df_input = pd.DataFrame(clean_data)
-        
-        # Ordre strict attendu par le ColumnTransformer de ton script d'entraînement
-        expected_order = ["agence", "secteur", "bi_multi_1", "type_de_financement", "pays_beneficiaire"]
-        df_input = df_input[expected_order]
-        
-        # 3. Inférence (Le modèle prédisant log_engagements)
-        predicted_log = model.predict(df_input)[0]
-        
-        # 4. Conversion en k€ réelle
-        predicted_real_k_eur = np.expm1(predicted_log)
-        
-        return float(predicted_real_k_eur)
-        
+        model = mlflow.pyfunc.load_model(model_uri)
+        logger.info(f"Modèle '{MODEL_NAME}@{version}' chargé avec succès en mémoire.")
+        _cached_model = model  # On le sauvegarde dans le cache
+        return model
     except Exception as e:
-        print(f"[ERROR] Échec de l'inférence avec le modèle Champion : {str(e)}")
+        logger.error(f"Erreur lors du chargement du modèle depuis MLflow : {e}")
         return None
+
+def make_prediction(input_data: dict, model_version="champion"):
+    """Prédit le montant de l'engagement en utilisant le modèle en cache."""
+    # Le modèle répondra instantanément s'il est déjà chargé
+    model = load_model_from_mlflow(version=model_version)
+    if model is None:
+        logger.error("Inférence annulée : Modèle introuvable.")
+        raise ValueError("Modèle introuvable ou non disponible.") 
+
+    try:
+        df_input = pd.DataFrame([input_data])
+
+        # Normalisation identique à l'entraînement
+        df_input.columns = (
+            df_input.columns
+            .str.lower()
+            .str.strip()
+            .str.normalize("NFKD")
+            .str.encode("ascii", errors="ignore")
+            .str.decode("utf-8")
+            .str.replace(r"[^\w]+", "_", regex=True)
+        )
+
+        y_pred_log = model.predict(df_input)
+        y_pred_real = np.expm1(y_pred_log[0])
+
+        return float(y_pred_real)
+
+    except Exception as e:
+        logger.error(f"Erreur lors de la prédiction : {e}")
+        raise e

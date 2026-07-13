@@ -1,14 +1,16 @@
-# -*- coding: utf-8 -*-
+import os
 from sqlalchemy import create_engine, text
 
-# Solution standard pour le Transaction Pooler (6543) : l'ID du projet réintègre l'utilisateur
-# Le point est encodé en %2E pour éviter que SQLAlchemy ne coupe la chaîne.
-SUPABASE_CONN_STRING = "postgresql://postgres%2Evsusfuhifwtuxohnbmwi:Uv7K6MelZ4xMVcDS@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require"
+# Configuration et Connexion Supabase
+SUPABASE_DB_URI = os.getenv("SUPABASE_DB_URI")
 
-engine = create_engine(
-    SUPABASE_CONN_STRING, 
-    pool_pre_ping=True
-)
+if not SUPABASE_DB_URI:
+    raise ValueError(
+        "Erreur : La variable d'environnement SUPABASE_DB_URI n'est pas définie ! "
+        "Vérifiez le fichier .env et la configuration Docker Compose."
+    )
+
+engine = create_engine(SUPABASE_DB_URI)
 
 def test_connection():
     try:
