@@ -421,258 +421,6 @@ elif page == "Tableau de bord MLOps":
        Projet fil rouge MLOps
        """)
 
-elif page == "Architecture MLOps":
-
-   st.title("🏗️ Architecture MLOps complète")
-
-   st.markdown("""
-Cette application suit une architecture **MLOps moderne** permettant
-d'automatiser toute la chaîne de traitement des données APD.
-
-Chaque composant possède un rôle précis depuis la collecte des données
-jusqu'à la prédiction finale.
-""")
-
-   st.subheader("📊 Chiffres clés du projet")
-
-   m1, m2, m3 = st.columns(3)
-   m1.metric("Lignes", "72 835")
-   m2.metric("Colonnes", "35")
-   m3.metric("Base", "PostgreSQL")
-
-   m4, m5, m6 = st.columns(3)
-   m4.metric("Modèle", "Random Forest")
-   m5.metric("Registry", "Champion")
-   m6.metric("API", "FastAPI")
-
-   st.caption("Ces indicateurs donnent une vue rapide du projet MLOps.")
-   st.divider()
-
-   st.subheader("🧩 Schéma d'architecture MLOps")
-
-   st.markdown("""
-   Ce schéma présente les interactions principales entre les données, le modèle,
-   MLflow, l’API FastAPI et l’interface Streamlit.
-   """)
-
-   mermaid_code = """
-   flowchart TB
-
-       A["📂 Données APD<br/>106 519 lignes<br/>103 colonnes"]
-       B["📦 Collecte automatique<br/>Batch APD"]
-       C["🗄️ Supabase<br/>PostgreSQL"]
-       D["⚙️ Prétraitement<br/>Nettoyage + encodage<br/>72 835 lignes / 35 variables"]
-       E["🤖 Entraînement<br/>Random Forest Regressor"]
-       F["📈 MLflow<br/>Tracking des runs<br/>métriques + artefacts"]
-       G["🏆 Model Registry<br/>Alias Champion"]
-       H["🌐 FastAPI<br/>API sécurisée<br/>/predict"]
-       I["📊 Streamlit<br/>Interface utilisateur"]
-       J["👤 Utilisateur<br/>Prédiction finale"]
-
-       A --> B --> C --> D --> E --> F --> G --> H --> I --> J
-
-       classDef data fill:#EAF3FF,stroke:#1F4E79,stroke-width:2px,color:#0B2545;
-       classDef ml fill:#EAF7EA,stroke:#2E7D32,stroke-width:2px,color:#103B16;
-       classDef tracking fill:#FFF3D6,stroke:#B7791F,stroke-width:2px,color:#4A2C00;
-       classDef deploy fill:#F1EAFE,stroke:#6B46C1,stroke-width:2px,color:#2D1B69;
-       classDef user fill:#FFFFFF,stroke:#555555,stroke-width:2px,color:#111111;
-
-       class A,B,C data;
-       class D,E ml;
-       class F,G tracking;
-       class H,I deploy;
-       class J user;
-   """
-
-   components.html(
-       f"""
-       <div class="mermaid">
-       {mermaid_code}
-       </div>
-
-       <script type="module">
-           import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
-           mermaid.initialize({{
-               startOnLoad: true,
-               theme: "base",
-               flowchart: {{
-                   curve: "basis",
-                   nodeSpacing: 45,
-                   rankSpacing: 65
-               }},
-               themeVariables: {{
-                   fontFamily: "Arial",
-                   fontSize: "18px",
-                   primaryBorderColor: "#1F4E79",
-                   lineColor: "#333333"
-               }}
-           }});
-       </script>
-       """,
-       height=850,
-       scrolling=True
-   )
-
-   st.success(
-       "✅ Le modèle utilisé par l'API est toujours l'alias **Champion** enregistré dans **MLflow Model Registry**."
-   )
-     
-         
-   st.divider()
-
-   st.subheader("🌐 Endpoints FastAPI")
-
-   st.markdown("""
-   Les principaux endpoints exposés par l'API sont présentés ci-dessous.
-   """)
-
-   st.table({
-       "Endpoint": [
-           "/",
-           "/model-metadata",
-           "/train",
-           "/train-status",
-           "/retrain",
-           "/etl",
-           "/drift",
-           "/predict",
-           "/trigger-drift",
-           "/prediction-history",
-           "/metrics",
-           "/docs"
-       ],
-       "Description": [
-           "Page d'accueil de l'API et statut global",
-           "Récupère les métadonnées et les scores du modèle Champion",
-           "Lance l'entraînement du modèle Random Forest en arrière-plan",
-           "Vérifie l'état d'exécution de l'entraînement (en cours, succès, échec)",
-           "Webhook Grafana pour déclencher un ré-entraînement d'urgence",
-           "Exécute le pipeline de préparation des données (ETL)",
-           "Déclenche l'analyse statistique de dérive (Data Drift)",
-           "Prédit les engagements (K EUR) et historise la requête",
-           "Simule une alerte de dérive pour tester Prometheus et Grafana",
-           "Récupère l'historique complet des prédictions enregistrées (Supabase)",
-           "Expose les métriques applicatives pour le scraping Prometheus",
-           "Documentation interactive Swagger UI"
-       ],
-   })
-
-   st.divider()
-
-   st.markdown("---")
-
-   st.subheader("🛠️ Technologies utilisées")
-
-   col1, col2, col3, col4 = st.columns(4)
-
-   with col1:
-       st.markdown("### 🐍 Python")
-       st.caption("Langage principal")
-
-   with col2:
-       st.markdown("### ⚡ FastAPI")
-       st.caption("API REST")
-
-   with col3:
-       st.markdown("### 📊 Streamlit")
-       st.caption("Interface")
-
-   with col4:
-       st.markdown("### 📈 MLflow")
-       st.caption("Tracking")
-
-   col1, col2, col3, col4 = st.columns(4)
-
-   with col1:
-       st.markdown("### 🗄️ Supabase")
-       st.caption("PostgreSQL")
-
-   with col2:
-       st.markdown("### 🌲 Scikit-Learn")
-       st.caption("Machine Learning")
-
-   with col3:
-       st.markdown("### 🐳 Docker")
-       st.caption("Déploiement")
-
-   with col4:
-       st.markdown("### 🐙 GitHub")
-       st.caption("Versioning")
-
-   st.divider()
-
-   st.header("📦 Description des composants")
-
-   col1, col2 = st.columns(2)
-
-   with col1:
-
-       st.info("""
-   ### 📦 Collect
-   - récupération automatique des données APD
-   - exécution par batch
-   - alimentation automatique de Supabase
-   """)
-
-       st.info("""
-   ### 🗄️ Supabase
-   - Base PostgreSQL
-   - stockage centralisé
-   - historique des données
-   - source unique pour l'entraînement
-   """)
-
-       st.info("""
-   ### ⚙️ Prétraitement
-   - nettoyage
-   - suppression des valeurs inutiles
-   - encodage
-   - préparation du DataFrame
-   """)
-
-   with col2:
-
-       st.info("""
-   ### 🤖 Machine Learning
-   - Random Forest Regressor
-   - prédiction des engagements (K EUR)
-   - pipeline Scikit-Learn
-   """)
-
-       st.info("""
-   ### 📈 MLflow
-   - suivi des expériences
-   - métriques
-   - artefacts
-   - Model Registry
-   - alias Champion
-   """)
-
-       st.info("""
-   ### 🌐 FastAPI
-   - API sécurisée (x-api-key)
-   - Collecte des données
-   - Entraînement du modèle
-   - Prédiction
-   - Métriques et statistiques
-   - Historique des prédictions
-   - Documentation Swagger (`/docs`)
-   """)
-
-   st.markdown("---")
-
-   st.success("""
-   ## ✅ Pipeline entièrement automatisé
-
-   **Collect → Supabase → Prétraitement → Random Forest → MLflow → Champion → FastAPI → Streamlit**
-
-   L'ensemble de la chaîne MLOps est automatisé, depuis la collecte des données APD jusqu'à la prédiction finale via l'interface utilisateur. 
-   """)
-	
-   st.info(
-       "🚀 Projet MLOps APD : pipeline de Machine Learning automatisé avec suivi MLflow et déploiement FastAPI/Streamlit."
-   )
-
 # =====================================================================
 # 5. PAGE : ARCHITECTURE MLOPS
 # =====================================================================
@@ -923,189 +671,186 @@ jusqu'à la prédiction finale.
    st.info(
        "🚀 Projet MLOps APD : pipeline de Machine Learning automatisé avec suivi MLflow et déploiement FastAPI/Streamlit."
    )
-
 # =====================================================================
 # 6. PAGE : DONNEES & SUPABASE
 # =====================================================================
 elif page == "Données & Supabase":
 
-    st.title("Gestion des données & Supabase")
+   st.title("🗄Gestion des données & Supabase")
 
-    # Mecanisme de securite anti-404 pour la soutenance
-    try:
-        stats_response = requests.get(f"{API_URL}/data-stats", timeout=30)
-        stats_response.raise_for_status()
-        stats = stats_response.json()
-        st.success("Connexion Supabase operationnelle")
-    except Exception:
-        # Valeurs de secours officielles si l'endpoint FastAPI est manquant (404)
-        stats = {
-            "raw_rows": 106519,
-            "raw_cols": 103,
-            "clean_rows": 72835,
-            "clean_cols": 35,
-            "database": "PostgreSQL (Supabase)"
-        }
-        st.warning("Statistiques lues depuis la configuration locale (Endpoint API indisponible)")
+   st.markdown("""
+   Cette page présente la gestion des données du projet APD : collecte, nettoyage,
+   transformation, stockage dans Supabase puis utilisation pour l'entraînement du modèle.
+   """)
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Données brutes", f"{stats['raw_rows']:,}".replace(",", " "), f"{stats['raw_cols']} colonnes")
-    c2.metric("Données nettoyées", f"{stats['clean_rows']:,}".replace(",", " "), f"{stats['clean_cols']} colonnes")
-    c3.metric("Base", stats["database"])
-    c4.metric("Modèle", "Random Forest", "Regressor")
+   st.markdown("## 🟢 État de la base de données")
 
-    st.markdown("""
-    Cette page presente la gestion des donnees du projet APD : collecte, nettoyage,
-    transformation, stockage dans Supabase puis utilisation pour l'entrainement du modele.
-    """)
+   col1, col2, col3 = st.columns(3)
 
-    st.markdown("## Etat de la base de données")
+   with col1:
+       st.metric(
+           label="🗄️ Base",
+           value="PostgreSQL",
+           delta="Supabase"
+       )
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric(
-            label="Base",
-            value="PostgreSQL",
-            delta="Supabase"
-        )
-    with col2:
-        st.metric(
-            label="Table principale",
-            value="donnees",
-            delta="Disponible"
-        )
-    with col3:
-        st.metric(
-            label="Statut",
-            value="Opérationnelle",
-            delta="Prête ML"
-        )
+   with col2:
+       st.metric(
+           label="📋 Table principale",
+           value="donnees",
+           delta="Disponible"
+       )
 
-    st.success("""
-    Base PostgreSQL operationnelle  
-    Donnees APD disponibles  
-    Table principale : donnees  
-    Donnees nettoyees et transformees  
-    Source unique utilisee pour l'entrainement du modele
-    """)
+   with col3:
+       st.metric(
+           label="✅ Statut",
+           value="Opérationnelle",
+           delta="Prête ML"
+       )
 
-    st.divider()
-    st.subheader("Pipeline de traitement des données")
-    st.caption(
-        "Ce pipeline synthetise le parcours complet des donnees, de la collecte jusqu'a la prediction utilisateur."
-    )
+   st.success("""
+   ✅ **Base PostgreSQL opérationnelle**  
+   ✅ **Données APD disponibles**  
+   ✅ **Table principale :** `donnees`  
+   ✅ **Données nettoyées et transformées**  
+   ✅ **Source unique utilisée pour l'entraînement du modèle**
+   """)
 
-    pipeline_dot = """
-    digraph {
-        rankdir=TB;
-        graph [bgcolor="transparent"];
-        node [
-            shape=box,
-            style="rounded,filled",
-            fontname="Helvetica",
-            fontsize=16,
-            margin="0.35,0.25",
-            width=3.6,
-            height=1.0
-        ];
-        edge [
-            color="#111827",
-            arrowsize=0.9
-        ];
+   st.divider()
 
-        A [label="Données APD\\n106 519 lignes\\n103 colonnes", fillcolor="#EAF2FF"];
-        B [label="Preparation des donnees\\nCollecte + nettoyage + transformation", fillcolor="#EAF7EA"];
-        C [label="Supabase\\nBase PostgreSQL centrale", fillcolor="#FFF7D6"];
-        D [label="Modelisation\\nRandom Forest Regressor", fillcolor="#F3E8FF"];
-        E [label="MLflow\\nTracking + Model Registry\\nAlias Champion", fillcolor="#FDEBD0"];
-        F [label="FastAPI + Streamlit\\nAPI /predict + interface utilisateur", fillcolor="#E0F2FE"];
-        G [label="Utilisateur\\nPrédiction finale", fillcolor="#FFFFFF"];
+   st.subheader("🔁 Pipeline de traitement des données")
 
-        A -> B -> C -> D -> E -> F -> G;
-    }
-    """
-    st.graphviz_chart(pipeline_dot, use_container_width=True)
+   st.caption(
+       "Ce pipeline synthétise le parcours complet des données, de la collecte jusqu'à la prédiction utilisateur."
+   )
 
-    st.success(
-        "Les donnees suivent un pipeline complet : preparation, stockage PostgreSQL, entrainement, suivi MLflow, deploiement API et prediction via Streamlit."
-    )
+   pipeline_dot = """
+   digraph {
+       rankdir=TB;
+       graph [bgcolor="transparent"];
+       node [
+           shape=box,
+           style="rounded,filled",
+           fontname="Helvetica",
+           fontsize=16,
+           margin="0.35,0.25",
+           width=3.6,
+           height=1.0
+       ];
+       edge [
+           color="#111827",
+           arrowsize=0.9
+       ];
 
-    st.divider()
-    st.subheader("Rôle de Supabase")
+       A [label="📁 Données APD\\n106 519 lignes\\n103 colonnes", fillcolor="#EAF2FF"];
+       B [label="⚙️ Préparation des données\\nCollecte + nettoyage + transformation", fillcolor="#EAF7EA"];
+       C [label="🗄️ Supabase\\nBase PostgreSQL centrale", fillcolor="#FFF7D6"];
+       D [label="🤖 Modélisation\\nRandom Forest Regressor", fillcolor="#F3E8FF"];
+       E [label="📈 MLflow\\nTracking + Model Registry\\nAlias Champion", fillcolor="#FDEBD0"];
+       F [label="🚀 FastAPI + Streamlit\\nAPI /predict + interface utilisateur", fillcolor="#E0F2FE"];
+       G [label="👤 Utilisateur\\nPrédiction finale", fillcolor="#FFFFFF"];
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("""
-        ### Base PostgreSQL
-        - Stockage centralise des donnees APD
-        - Historique des donnees nettoyees
-        - Table principale : donnees
-        - Source utilisee pour l'entrainement
-        """)
-    with col2:
-        st.markdown("""
-        ### Utilite MLOps
-        - Remplace le fichier CSV local
-        - Facilite l'automatisation
-        - Rend le pipeline plus reproductible
-        - Prepare le projet a un usage professionnel
-        """)
+       A -> B -> C -> D -> E -> F -> G;
+   }
+   """
 
-    st.divider()
-    st.subheader("Rôle des batchs")
-    st.markdown("""
-    Les batchs permettent d'automatiser le traitement des donnees.
-    Ils servent a :
-    - recuperer les donnees APD ;
-    - nettoyer et transformer les donnees ;
-    - inserer les donnees dans Supabase ;
-    - fournir une base propre pour l'entrainement du modele.
-    """)
-    
-    st.markdown("#### Pipeline automatisé des batches")
-    st.caption("Les traitements sont executes automatiquement avant l'entrainement du modele.")
-    
-    col_b1, col_b2, col_b3 = st.columns([1, 2, 1])
-    with col_b2:
-        st.graphviz_chart("""
-        digraph {
-            rankdir=TB;
-            node [shape=box, style="rounded,filled", fontname="Arial", fontsize=13];
+   st.graphviz_chart(pipeline_dot, use_container_width=True)
 
-            A [label="Collecte\\nDonnées APD", fillcolor="#E8EEF7"];
-            B [label="Nettoyage\\nValeurs inutiles", fillcolor="#EAF7EA"];
-            C [label="Transformation\\nEncodage + sélection", fillcolor="#EAF7EA"];
-            D [label="Supabase\\nPostgreSQL", fillcolor="#FFF4D6"];
-            E [label="Random Forest\\nEntraînement", fillcolor="#EDE7F6"];
+   st.success(
+       "✅ Les données suivent un pipeline complet : préparation, stockage PostgreSQL, entraînement, suivi MLflow, déploiement API et prédiction via Streamlit."
+   )
 
-            A -> B -> C -> D -> E;
-        }
-        """)
+  
+          
+   st.divider()
 
-    st.divider()
-    st.subheader("Qualité des données")
+   st.subheader("🗄️ Rôle de Supabase")
 
-    col_q1, col_q2 = st.columns(2)
-    with col_q1:
-        st.markdown("""
-        ### Nettoyage effectué
-        - Nettoyage des donnees
-        - Traitement des valeurs manquantes
-        - Selection des variables utiles
-        - Encodage des variables categorielles
-        """)
-    with col_q2:
-        st.markdown("""
-        ### Données prêtes pour le ML
-        - Dataset de 72 835 lignes
-        - 35 variables conservees
-        - Cible definie : Engagements (K EUR)
-        - Compatible avec le pipeline Scikit-Learn
-        """)
+   col1, col2 = st.columns(2)
 
-    st.success("""
-    Les donnees APD ont ete nettoyees, transformees et preparees avant leur utilisation par le pipeline d'entrainement Random Forest.
-    """)
+   with col1:
+       st.markdown("""
+       ### Base PostgreSQL
+
+       - Stockage centralisé des données APD
+       - Historique des données nettoyées
+       - Table principale : `donnees`
+       - Source utilisée pour l'entraînement
+       """)
+
+   with col2:
+       st.markdown("""
+       ### Utilité MLOps
+
+       - Remplace le fichier CSV local
+       - Facilite l'automatisation
+       - Rend le pipeline plus reproductible
+       - Prépare le projet à un usage plus professionnel
+       """)
+
+   st.divider()
+
+   st.subheader("⚙️ Rôle des batchs")
+
+   st.markdown("""
+   Les batchs permettent d'automatiser le traitement des données.
+
+   Ils servent à :
+
+   - récupérer les données APD ;
+   - nettoyer et transformer les données ;
+   - insérer les données dans Supabase ;
+   - fournir une base propre pour l'entraînement du modèle.
+   """)
+   st.markdown("#### 🔄 Pipeline automatisé des batches")
+   st.caption("Les traitements sont exécutés automatiquement avant l'entraînement du modèle.")
+   col1, col2, col3 = st.columns([1,2,1])
+   with col2:
+       st.graphviz_chart("""
+       digraph {
+           rankdir=TB;
+           node [shape=box, style="rounded,filled", fontname="Arial", fontsize=13];
+
+           A [label="📥 Collecte\\nDonnées APD", fillcolor="#E8EEF7"];
+           B [label="🧹 Nettoyage\\nValeurs inutiles", fillcolor="#EAF7EA"];
+           C [label="⚙️ Transformation\\nEncodage + sélection", fillcolor="#EAF7EA"];
+           D [label="🗄️ Supabase\\nPostgreSQL", fillcolor="#FFF4D6"];
+           E [label="🤖 Random Forest\\nEntraînement", fillcolor="#EDE7F6"];
+
+           A -> B -> C -> D -> E;
+       }
+       """)
+
+   st.divider()
+
+   st.subheader("✅ Qualité des données")
+
+   col1, col2 = st.columns(2)
+
+   with col1:
+       st.markdown("""
+       ### Nettoyage effectué
+
+       - Nettoyage des données
+       - Traitement des valeurs manquantes
+       - Sélection des variables utiles
+       - Encodage des variables catégorielles
+       """)
+
+   with col2:
+       st.markdown("""
+       ### Données prêtes pour le ML
+
+       - Dataset de 72 835 lignes
+       - 35 variables conservées
+       - Cible définie : `Engagements (K EUR)`
+       - Compatible avec le pipeline Scikit-Learn
+       """)
+
+   st.success("""
+   ✅ Les données APD ont été nettoyées, transformées et préparées
+   avant leur utilisation par le pipeline d'entraînement Random Forest.
+   """)
 
 # =====================================================================
 # 7. PAGE : AMELIORATIONS FUTURES
@@ -1138,19 +883,27 @@ elif page == "Améliorations futures":
 
    st.divider()
 
-   st.header("📊 Monitoring avec Prometheus et Grafana")
+   st.markdown("## 📈 Évolutions du monitoring")
 
-   st.markdown("""
-   **Prometheus** et **Grafana** permettraient de suivre l'API et le modèle en production :
+   st.write("""
+   Le système de monitoring basé sur Evidently détecte automatiquement les dérives des données. 
+   Lorsqu'un seuil de dérive est dépassé, un réentraînement du modèle peut être déclenché 
+   afin de restaurer ses performances.
 
-   - temps de réponse de l'API ;
-   - nombre de prédictions réalisées ;
-   - erreurs HTTP ;
-   - évolution des performances du modèle ;
-   - dérive potentielle des données.
+   Les prochaines évolutions pourraient inclure :
    """)
 
-   st.success("Objectif : surveiller la santé du système et détecter rapidement les anomalies.")
+   st.markdown("""
+   - Alertes automatiques (email, Slack ou Teams) en cas de dérive importante.
+   - Tableau de bord temps réel pour suivre l'évolution des métriques du modèle.
+   - Déclenchement automatique du réentraînement via Airflow après détection d'un drift.
+   - Suivi continu des performances du modèle en production.
+   - Historisation avancée des rapports de monitoring et des actions de remédiation.
+   """)
+
+   st.success(
+       "Objectif : rendre le monitoring entièrement automatisé et proactif tout au long du cycle de vie du modèle."
+   )
 
    st.divider()
 
@@ -1185,10 +938,10 @@ elif page == "Améliorations futures":
 
    st.divider()
 
-   st.header("🎯 Conclusion")
+   st.markdown("## 🎯 Conclusion")
 
    st.info("""
-   Le projet met déjà en oeuvre les principales briques d'un pipeline MLOps moderne :
+   Le projet met désormais en œuvre les principales briques d'un pipeline MLOps moderne :
 
    - collecte automatisée des données ;
    - stockage dans Supabase PostgreSQL ;
@@ -1197,7 +950,12 @@ elif page == "Améliorations futures":
    - Model Registry avec alias Champion ;
    - API FastAPI sécurisée ;
    - interface Streamlit ;
-   - intégration continue (CI) avec GitHub Actions.
+   - intégration continue (CI) avec GitHub Actions ;
+   - monitoring des données avec Evidently ;
+   - détection automatique du drift ;
+   - génération de rapports HTML et JSON ;
+   - mécanisme de remédiation avec possibilité de déclencher le réentraînement du modèle ;
+   - journalisation des actions de monitoring et de remédiation.
 
-   Les améliorations proposées (Airflow, Prometheus, Grafana, Kubernetes et déploiement continu) constituent les prochaines étapes pour faire évoluer ce prototype vers une plateforme MLOps pleinement industrialisée.
+   Les évolutions proposées (Airflow, alertes automatiques, Kubernetes, déploiement cloud et automatisation complète du réentraînement) permettront de faire évoluer ce prototype vers une plateforme MLOps encore plus robuste et industrialisée.
    """)
