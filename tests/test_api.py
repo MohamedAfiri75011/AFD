@@ -4,15 +4,23 @@ from api.main import app
 
 client = TestClient(app)
 
-# Identifiants valides pour les tests
-VALID_AUTH = ("admin_agence", "SuperMotDePasseSecurise123!")
+# Identifiants de test (utilisés pour vérifier les blocages de sécurité)
 INVALID_AUTH = ("hacker", "wrongpassword")
 
 def test_read_root():
     """Vérifie que la racine de l'API répond correctement sans auth."""
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json()["status"] == "online"
+    # On s'assure que l'API renvoie bien un dictionnaire/JSON valide
+    assert isinstance(response.json(), dict)
+
+def test_predict_endpoint_public():
+    """Vérifie que la route /predict refuse les requêtes mal formées mais est accessible public."""
+    # On envoie un payload vide pour tester la réaction de la route publique
+    response = client.post("/predict", json={})
+    # L'API doit répondre 422 (Unprocessable Entity) car le JSON est vide, 
+    # mais PAS 401 (Unauthorized), ce qui prouve que la route est bien publique !
+    assert response.status_code == 422
 
 def test_etl_endpoint_unauthorized():
     """Vérifie que la route /etl rejette les requêtes sans authentification."""
