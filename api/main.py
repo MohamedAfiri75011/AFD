@@ -37,13 +37,15 @@ app = FastAPI(
 # ==============================================================================
 # CONFIGURATION DE LA SECURITE (BASIC AUTH DEPUIS LE .ENV)
 # ==============================================================================
-ecurity = HTTPBasic()
-ADMIN_USER = os.getenv("ADMIN_USER", "admin_agence")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")  # Plus de mot de passe par défaut ici !
+security = HTTPBasic()
 
+# 2. On récupère les variables d'environnement
+ADMIN_USER = os.getenv("ADMIN_USER", "admin_agence")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
+# 3. On utilise "security" dans la fonction juste en dessous
 def verification_auth(credentials: HTTPBasicCredentials = Depends(security)):
     """Verifie de maniere securisee les identifiants de Basic Auth."""
-    # Si la variable n'est pas définie dans l'environnement, on refuse par sécurité
     if not ADMIN_PASSWORD:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
