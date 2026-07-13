@@ -26,3 +26,6 @@ Thumbs.db
 
 # Scripts de tests et de simulation
 scripts/
+
+# Fichiers de log
+*.log
