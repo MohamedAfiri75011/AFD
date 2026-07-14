@@ -294,15 +294,15 @@ Projet réalisé par :
 
 ## 🌐 API FastAPI
 L'API REST permet d'entraîner le modèle, d'effectuer des prédictions, de consulter les métriques et d'accéder à l'historique des prédictions via une documentation Swagger interactive.
-![API FastAPI](docs/images/api_fastapi.png)
+![API FastAPI](docs/api_fastapi.png)
 
 ## 💻 Interface Streamlit
 L'application Streamlit constitue l'interface utilisateur du projet. Elle permet d'envoyer des données à l'API, d'obtenir une prédiction et d'afficher les informations du modèle Champion.
-![Application Streamlit](docs/images/streamlit_prediction.png)
+![Application Streamlit](docs/streamlit_prediction.png)
 
 ## 📈 MLflow (Model Registry)
 MLflow assure le suivi des expériences d'entraînement, l'enregistrement des métriques et le versionnement. Le modèle Champion est automatiquement utilisé par l'API.
-![MLflow](docs/images/mlflow_run.png)
+![MLflow](docs/mlflow_run.png)
 
 ---
 
@@ -312,12 +312,12 @@ Grafana, alimenté par les métriques collectées en temps réel par Prometheus,
 
 ## 🧠 Tableaux de bord de Performance IA
 Ce panneau suit la précision de notre modèle Random Forest. Il affiche en continu le coefficient de détermination (R²), l'impact métier concret via l'Erreur Absolue Moyenne (**MAE** en k€), l'impact des valeurs aberrantes (**RMSE**), ainsi que le score de dérive des données (Calculé via Evidently).
-![Tableau de bord - Performance Modèle](docs/images/grafana_performance.png)
+![Tableau de bord - Performance Modèle](docs/grafana_performance.png)
 
 ## ⚡ Performance Opérationnelle & Disponibilité API
 Ce tableau de bord surveille la santé de notre microservice FastAPI. Il permet de suivre la latence (P95) des requêtes de prédiction, le volume de trafic ainsi que la répartition des codes de retour HTTP (Succès 2xx, Erreurs clients 4xx, Crashs serveur 5xx) pour garantir un taux de disponibilité (**SLA**) de 100 %.
-![Tableau de bord - Métriques API](docs/images/grafana_api_metrics.png)
+![Tableau de bord - Métriques API](docs/grafana_api_metrics.png)
 
 ## 🖥️ Monitoring Système (Infrastructure)
 Pour s'assurer que notre modèle ne sature pas la machine hôte, ce panneau supervise la consommation des ressources matérielles sous-jacentes : le taux d'utilisation du CPU, la charge de la mémoire RAM et le stockage disponible sur le disque principal.
-![Tableau de bord - Infrastructure](docs/images/grafana_system.png)
+![Tableau de bord - Infrastructure](docs/grafana_system.png)
