@@ -321,3 +321,14 @@ Ce tableau de bord surveille la santé de notre microservice FastAPI. Il permet 
 ## 🖥️ Monitoring Système (Infrastructure)
 Pour s'assurer que notre modèle ne sature pas la machine hôte, ce panneau supervise la consommation des ressources matérielles sous-jacentes : le taux d'utilisation du CPU, la charge de la mémoire RAM et le stockage disponible sur le disque principal.
 ![Tableau de bord - Infrastructure](docs/grafana_system.png)
+
+## ⚡ Alertes
+Alerte Erreur Serveur : Se déclenche immédiatement pour vous prévenir si l'API rencontre un problème technique ou un plantage (Erreurs 500).
+
+Alerte Pic de Trafic : Détecte une augmentation soudaine et anormale du nombre de requêtes envoyées à l'application.
+
+Alerte Dérive des Données : Vous prévient quand les nouvelles données changent trop par rapport au passé, indiquant qu'il faut ré-entraîner le modèle.
+
+![Alertes](docs/grafana_alerte1.png)
+
+![Alertes](docs/grafana_alerte2.png)

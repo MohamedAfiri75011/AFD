@@ -51,12 +51,11 @@ def load_data():
 st.sidebar.title("Navigation MLOps")
 page = st.sidebar.radio(
     "Selectionnez une page :", 
-    [
+    [   "Tableau de bord MLOps",
+        "Architecture MLOps",
         "Prédictions", 
         "Drift", 
         "Re-entrainement Modele",
-        "Tableau de bord MLOps",
-        "Architecture MLOps",
         "Données & Supabase",
         "Améliorations futures"
     ]
@@ -344,7 +343,6 @@ elif page == "Tableau de bord MLOps":
        - API FastAPI sécurisée
        - Endpoint `/predict`
        - Appel du modèle Champion
-       - Temps de réponse affiché
        """)
 
    with col4:
@@ -354,7 +352,6 @@ elif page == "Tableau de bord MLOps":
        - Application Streamlit
        - Formulaire de prédiction
        - Dashboard MLOps
-       - Visualisation du pipeline
        """)
 
    st.divider()
@@ -440,7 +437,7 @@ jusqu'à la prédiction finale.
 
    m1, m2, m3 = st.columns(3)
    m1.metric("Lignes", "72 835")
-   m2.metric("Colonnes", "35")
+   m2.metric("Colonnes", "50")
    m3.metric("Base", "PostgreSQL")
 
    m4, m5, m6 = st.columns(3)
@@ -464,7 +461,7 @@ jusqu'à la prédiction finale.
        A["📂 Données APD<br/>106 519 lignes<br/>103 colonnes"]
        B["📦 Collecte automatique<br/>Batch APD"]
        C["🗄️ Supabase<br/>PostgreSQL"]
-       D["⚙️ Prétraitement<br/>Nettoyage + encodage<br/>72 835 lignes / 35 variables"]
+       D["⚙️ Prétraitement<br/>Nettoyage + encodage<br/>72 835 lignes / 50 variables"]
        E["🤖 Entraînement<br/>Random Forest Regressor"]
        F["📈 MLflow<br/>Tracking des runs<br/>métriques + artefacts"]
        G["🏆 Model Registry<br/>Alias Champion"]
@@ -711,7 +708,7 @@ elif page == "Données & Supabase":
    st.success("""
    ✅ **Base PostgreSQL opérationnelle**  
    ✅ **Données APD disponibles**  
-   ✅ **Table principale :** `donnees`  
+   ✅ **Table principale :** `afd`  
    ✅ **Données nettoyées et transformées**  
    ✅ **Source unique utilisée pour l'entraînement du modèle**
    """)
@@ -774,7 +771,7 @@ elif page == "Données & Supabase":
 
        - Stockage centralisé des données APD
        - Historique des données nettoyées
-       - Table principale : `donnees`
+       - Table principale : `afd`
        - Source utilisée pour l'entraînement
        """)
 
@@ -842,7 +839,7 @@ elif page == "Données & Supabase":
        ### Données prêtes pour le ML
 
        - Dataset de 72 835 lignes
-       - 35 variables conservées
+       - 50 variables conservées
        - Cible définie : `Engagements (K EUR)`
        - Compatible avec le pipeline Scikit-Learn
        """)
@@ -880,30 +877,6 @@ elif page == "Améliorations futures":
    """)
 
    st.success("Objectif : remplacer les lancements manuels par un pipeline planifié et reproductible.")
-
-   st.divider()
-
-   st.markdown("## 📈 Évolutions du monitoring")
-
-   st.write("""
-   Le système de monitoring basé sur Evidently détecte automatiquement les dérives des données. 
-   Lorsqu'un seuil de dérive est dépassé, un réentraînement du modèle peut être déclenché 
-   afin de restaurer ses performances.
-
-   Les prochaines évolutions pourraient inclure :
-   """)
-
-   st.markdown("""
-   - Alertes automatiques (email, Slack ou Teams) en cas de dérive importante.
-   - Tableau de bord temps réel pour suivre l'évolution des métriques du modèle.
-   - Déclenchement automatique du réentraînement via Airflow après détection d'un drift.
-   - Suivi continu des performances du modèle en production.
-   - Historisation avancée des rapports de monitoring et des actions de remédiation.
-   """)
-
-   st.success(
-       "Objectif : rendre le monitoring entièrement automatisé et proactif tout au long du cycle de vie du modèle."
-   )
 
    st.divider()
 
@@ -952,10 +925,11 @@ elif page == "Améliorations futures":
    - interface Streamlit ;
    - intégration continue (CI) avec GitHub Actions ;
    - monitoring des données avec Evidently ;
+   - tableaux de bord de surveillance et alertes API avec Prometheus/Grafana;         
    - détection automatique du drift ;
-   - génération de rapports HTML et JSON ;
+   - génération de rapports HTML pour le drift ;
    - mécanisme de remédiation avec possibilité de déclencher le réentraînement du modèle ;
    - journalisation des actions de monitoring et de remédiation.
 
-   Les évolutions proposées (Airflow, alertes automatiques, Kubernetes, déploiement cloud et automatisation complète du réentraînement) permettront de faire évoluer ce prototype vers une plateforme MLOps encore plus robuste et industrialisée.
+   Les évolutions proposées (Airflow, Kubernetes, déploiement cloud et automatisation complète du réentraînement) permettront de faire évoluer ce prototype vers une plateforme MLOps encore plus robuste et industrialisée.
    """)
