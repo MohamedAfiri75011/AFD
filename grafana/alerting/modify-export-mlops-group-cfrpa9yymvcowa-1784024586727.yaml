@@ -1,0 +1,165 @@
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: mlops-group
+      folder: MLOps-Alerts
+      interval: 10s
+      rules:
+        - uid: dfrp3ymvv9y4gf
+          title: Alerte-Erreurs-API-Trigger-Retrain
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: efrlmijfvocg0f
+              model:
+                editorMode: code
+                expr: sum(increase(http_requests_total{status=~"5.."}[1m]))
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          annotations:
+            description: Le système a détecté des erreurs internes sur le serveur FastAPI lors de l'inférence. Cela indique une défaillance du modèle face à des données inattendues ou un problème d'infrastructure. La politique de routage intelligente a automatiquement appelé le Webhook pour déclencher le pipeline de ré-entraînement (Continuous Training) en arrière-plan.
+            summary: Crash de l'API (Erreur HTTP 500) - Action requise
+          labels:
+            trigger: retrain
+          isPaused: false
+        - uid: cfrpa9yymvcowa
+          title: Alerte-Latence-API-Trigger-Retrain
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: efrlmijfvocg0f
+              model:
+                editorMode: code
+                expr: sum(rate(http_request_duration_seconds_sum[5m])) / sum(rate(http_request_duration_seconds_count[5m]))
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0.5
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          annotations:
+            description: La latence moyenne de l'API dépasse 500ms. Déclenchement du ré-entraînement automatique du modèle pour corriger une éventuelle dérive de performance.
+            summary: Dégradation des temps de réponse de l'API.
+          labels:
+            trigger: retrain
+          isPaused: false
+        - uid: bfrpajmhnb01sa
+          title: Alerte-Trafic-Spike-Trigger-Retrain
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: efrlmijfvocg0f
+              model:
+                editorMode: code
+                exemplar: false
+                expr: http_requests_total{handler="/predict"}
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: C
+              queryType: expression
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 100
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - C
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: NoData
+          execErrState: Error
+          for: 1m
+          annotations:
+            description: Le volume dépasse les 50 requêtes par seconde. Activation préventive du pipeline de ré-entraînement pour garantir la stabilité et la pertinence du modèle sous forte charge.
+            summary: Pic de trafic critique détecté sur l'API.
+          labels:
+            trigger: retrain
+          isPaused: false

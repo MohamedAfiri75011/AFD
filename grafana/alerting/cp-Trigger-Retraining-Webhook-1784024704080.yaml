@@ -1,0 +1,16 @@
+apiVersion: 1
+contactPoints:
+    - orgId: 1
+      name: Trigger-Retraining-Webhook
+      receivers:
+        - uid: bfrp2blt5kem8a
+          type: webhook
+          settings:
+            url: http://fastapi_server:8000/retrain
+          disableResolveMessage: false
+        - uid: bfrppfl6qcpvkc
+          type: email
+          settings:
+            addresses: afiri.mohamed@free.fr
+            singleEmail: false
+          disableResolveMessage: false
